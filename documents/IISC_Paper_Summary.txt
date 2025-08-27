@@ -1,0 +1,65 @@
+IISC Paper: A Comprehensive Safety Architecture for Human-Robot Collaboration in Confined Workspaces using Improved Artificial Potential Field
+
+ORGANIZATION: Indian Institute of Science (IISc) and Brunel University London
+LOCATION: Bengaluru, Karnataka, India and Uxbridge, UK
+ROLE: Research Contributor and Implementation Lead
+TIMELINE: April 2023 to December 2023 (9 months)
+STATUS: Published Research Article
+
+OBJECTIVES:
+To develop a comprehensive safety architecture for human-robot collaboration (HRC) in confined workspaces that integrates safety and productivity methods, optimizes paths based on length and bending energy, supports multimodal interaction, addresses static and dynamic obstacles, and facilitates swift resumption of high-speed operations post safety interventions.
+
+PERSONAL CONTRIBUTIONS (What I worked on):
+1. Task Space Mapping Module: Developed the human guidance-based dynamic point allocation system for obstacle identification and environmental layout mapping
+2. YOLO-based Gesture Communication: Implemented the gesture recognition pipeline using YOLOv7 CNN and Mediapipe for intuitive human-robot interaction
+3. Pose-estimation based Safety Evaluation Module: Built the safety evaluation system using Mask-CNN instance segmentation for precise environmental understanding
+4. Experimental Implementation: Coded and implemented all experiments on the UR5 robot using ROS Noetic, Gazebo, and MoveIt framework
+5. Data Collection and Analysis: Conducted comprehensive experiments and collected performance data
+6. Technical Documentation: Contributed to the technical sections of the paper
+
+TECHNOLOGIES I USED:
+- ROS Noetic framework
+- Gazebo simulation environment
+- MoveIt motion planning
+- UR5 robot manipulator
+- Realsense D435i cameras
+- Mediapipe for pose estimation
+- YOLOv7 CNN for gesture recognition
+- Mask-CNN for instance segmentation
+- Python and C++ programming
+- Ubuntu 20.04
+
+ACHIEVEMENTS FROM MY WORK:
+- Successfully implemented gesture-based communication system achieving 83.87% system performance improvement
+- Developed task space mapping that eliminated the need for reactive control by maintaining consistent robot paths
+- Implemented pose-estimation based safety evaluation that dynamically adjusted trajectories based on real-time human spatial data
+- Created a working experimental setup with UR5 robot and multiple camera systems
+- Achieved seamless integration between vision systems, safety modules, and robot control
+- Demonstrated real-time adaptation of robot paths without compromising productivity
+
+SKILLS DEMONSTRATED:
+Technical: Robotics programming, Computer vision, Machine learning, ROS development, Motion planning, Safety systems, Experimental design, Python/C++ programming, Simulation, Hardware integration
+Soft: Research methodology, Problem-solving, Technical writing, Collaboration, Time management, Laboratory work
+
+CHALLENGES OVERCOME:
+- Balancing academic coursework with intensive laboratory research
+- Managing time effectively between classes and weekend lab sessions
+- Learning complex ROS and robotics frameworks while implementing research
+- Debugging hardware-software integration issues
+- Coordinating with research team members across different universities
+
+RESEARCH IMPACT:
+The work contributes to the field of human-robot collaboration by demonstrating that safety and productivity can be achieved simultaneously through intelligent path planning and real-time adaptation. The multimodal interaction approach (gesture + pose estimation) provides a more intuitive interface than traditional methods.
+
+NOTES:
+- I was responsible for the implementation and experimental validation of the research
+- My contributions focused on the practical, hands-on aspects of the research
+- I did NOT work on the theoretical aspects like Artificial Potential Field algorithms, performance evaluation metrics, or optimal path generation
+- The research was conducted as part of my academic work at IISc
+- The paper represents collaborative work between multiple institutions
+
+OUTCOMES:
+- Research paper published in peer-reviewed journal
+- Experimental validation completed successfully
+- Framework demonstrated practical applicability in industrial settings
+- Contributed to advancing the field of safe human-robot collaboration

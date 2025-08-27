@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block title %}Resume Generator - Shravan's Personal AI Assistant{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background-color: #f8f9fa;
+        border-radius: 0.375rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .resume-preview {
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 2rem;
+        font-family: 'Courier New', monospace;
+        white-space: pre-wrap;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    
+    .loading {
+        display: none;
+        text-align: center;
+        padding: 2rem;
+    }
+    
+    .loading.show {
+        display: block;
+    }
+    
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-file-alt me-2"></i>
+                    AI-Powered Resume Generator
+                </h4>
+                <small class="text-light">
+                    Generate tailored resumes and cover letters based on specific job requirements
+                </small>
+            </div>
+            <div class="card-body">
+                <form id="resumeForm">
+                    <!-- Job Description Section -->
+                    <div class="form-section">
+                        <h5 class="mb-3">
+                            <i class="fas fa-briefcase me-2"></i>
+                            Job Description
+                        </h5>
+                        <div class="mb-3">
+                            <label for="jobDescription" class="form-label">
+                                Paste the job description here:
+                            </label>
+                            <textarea class="form-control" 
+                                      id="jobDescription" 
+                                      rows="6" 
+                                      placeholder="Paste the complete job description, including requirements, responsibilities, and company information..."
+                                      required></textarea>
+                            <div class="form-text">
+                                The more detailed the job description, the better tailored your resume will be.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Personal Information Section -->
+                    <div class="form-section">
+                        <h5 class="mb-3">
+                            <i class="fas fa-user me-2"></i>
+                            Your Information
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="name" class="form-label">Full Name *</label>
+                                <input type="text" class="form-control" id="name" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">Email *</label>
+                                <input type="email" class="form-control" id="email" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="phone" class="form-label">Phone *</label>
+                                <input type="tel" class="form-control" id="phone" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="location" class="form-label">Location *</label>
+                                <input type="text" class="form-control" id="location" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="linkedin" class="form-label">LinkedIn Profile</label>
+                                <input type="url" class="form-control" id="linkedin" placeholder="https://linkedin.com/in/...">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="github" class="form-label">GitHub Profile</label>
+                                <input type="url" class="form-control" id="github" placeholder="https://github.com/...">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Generation Options -->
+                    <div class="form-section">
+                        <h5 class="mb-3">
+                            <i class="fas fa-cogs me-2"></i>
+                            Generation Options
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="generateResume" checked>
+                                    <label class="form-check-label" for="generateResume">
+                                        Generate Tailored Resume
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="generateCoverLetter" checked>
+                                    <label class="form-check-label" for="generateCoverLetter">
+                                        Generate Cover Letter
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Generate Button -->
+                    <div class="text-center mb-4">
+                        <button type="submit" class="btn btn-success btn-lg px-5">
+                            <i class="fas fa-magic me-2"></i>
+                            Generate Tailored Application
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Loading Indicator -->
+                <div class="loading" id="loading">
+                    <div class="spinner-border text-success mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5>Generating your tailored application...</h5>
+                    <p class="text-muted">This may take a few moments as I analyze the job requirements and match them with your experience.</p>
+                </div>
+                
+                <!-- Results Section -->
+                <div id="results" style="display: none;">
+                    <hr class="my-4">
+                    
+                    <!-- Resume Results -->
+                    <div id="resumeResults" style="display: none;">
+                        <h5 class="mb-3">
+                            <i class="fas fa-file-alt me-2 text-primary"></i>
+                            Generated Resume
+                        </h5>
+                        <div class="resume-preview" id="resumePreview"></div>
+                        <div class="mt-3">
+                            <button class="btn btn-primary me-2" id="downloadResume">
+                                <i class="fas fa-download me-2"></i>
+                                Download Resume
+                            </button>
+                            <button class="btn btn-outline-primary" id="copyResume">
+                                <i class="fas fa-copy me-2"></i>
+                                Copy to Clipboard
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Cover Letter Results -->
+                    <div id="coverLetterResults" style="display: none;">
+                        <h5 class="mb-3 mt-4">
+                            <i class="fas fa-envelope me-2 text-success"></i>
+                            Generated Cover Letter
+                        </h5>
+                        <div class="resume-preview" id="coverLetterPreview"></div>
+                        <div class="mt-3">
+                            <button class="btn btn-success me-2" id="downloadCoverLetter">
+                                <i class="fas fa-download me-2"></i>
+                                Download Cover Letter
+                            </button>
+                            <button class="btn btn-outline-success" id="copyCoverLetter">
+                                <i class="fas fa-copy me-2"></i>
+                                Copy to Clipboard
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Tips Section -->
+                    <div class="alert alert-info mt-4">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            Pro Tips for Your Application
+                        </h6>
+                        <ul class="mb-0">
+                            <li><strong>Review and Customize:</strong> While the AI generates a solid foundation, always review and personalize the content</li>
+                            <li><strong>Quantify Achievements:</strong> Add specific numbers and metrics where possible</li>
+                            <li><strong>Match Keywords:</strong> Ensure the resume includes relevant keywords from the job description</li>
+                            <li><strong>Proofread:</strong> Double-check for any errors or inconsistencies</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('resumeForm');
+    const loading = document.getElementById('loading');
+    const results = document.getElementById('results');
+    
+    form.addEventListener('submit', handleFormSubmit);
+    
+    // Setup copy buttons
+    document.getElementById('copyResume').addEventListener('click', () => copyToClipboard('resumePreview'));
+    document.getElementById('copyCoverLetter').addEventListener('click', () => copyToClipboard('coverLetterPreview'));
+});
+
+async function handleFormSubmit(event) {
+    event.preventDefault();
+    
+    // Show loading
+    document.getElementById('loading').classList.add('show');
+    document.getElementById('results').style.display = 'none';
+    
+    // Collect form data
+    const formData = {
+        job_description: document.getElementById('jobDescription').value,
+        user_info: {
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value,
+            location: document.getElementById('location').value,
+            linkedin: document.getElementById('linkedin').value,
+            github: document.getElementById('github').value
+        }
+    };
+    
+    const generateResume = document.getElementById('generateResume').checked;
+    const generateCoverLetter = document.getElementById('generateCoverLetter').checked;
+    
+    try {
+        let resumeData = null;
+        let coverLetterData = null;
+        
+        // Generate resume if requested
+        if (generateResume) {
+            const resumeResponse = await fetch('/api/resume/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+            
+            const resumeResult = await resumeResponse.json();
+            if (resumeResult.success) {
+                resumeData = resumeResult;
+            } else {
+                throw new Error('Resume generation failed: ' + resumeResult.error);
+            }
+        }
+        
+        // Generate cover letter if requested
+        if (generateCoverLetter) {
+            const coverLetterResponse = await fetch('/api/resume/cover-letter', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+            
+            const coverLetterResult = await coverLetterResponse.json();
+            if (coverLetterResult.success) {
+                coverLetterData = coverLetterResult;
+            } else {
+                throw new Error('Cover letter generation failed: ' + coverLetterResult.error);
+            }
+        }
+        
+        // Display results
+        displayResults(resumeData, coverLetterData);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error generating application: ' + error.message);
+    } finally {
+        // Hide loading
+        document.getElementById('loading').classList.remove('show');
+    }
+}
+
+function displayResults(resumeData, coverLetterData) {
+    const results = document.getElementById('results');
+    const resumeResults = document.getElementById('resumeResults');
+    const coverLetterResults = document.getElementById('coverLetterResults');
+    
+    // Show resume results
+    if (resumeData) {
+        document.getElementById('resumePreview').textContent = resumeData.formatted_resume;
+        resumeResults.style.display = 'block';
+        
+        // Setup download button
+        document.getElementById('downloadResume').onclick = () => {
+            downloadText(resumeData.formatted_resume, 'tailored_resume.txt');
+        };
+    }
+    
+    // Show cover letter results
+    if (coverLetterData) {
+        document.getElementById('coverLetterPreview').textContent = coverLetterData.cover_letter;
+        coverLetterResults.style.display = 'block';
+        
+        // Setup download button
+        document.getElementById('downloadCoverLetter').onclick = () => {
+            downloadText(coverLetterData.cover_letter, 'cover_letter.txt');
+        };
+    }
+    
+    results.style.display = 'block';
+    
+    // Scroll to results
+    results.scrollIntoView({ behavior: 'smooth' });
+}
+
+function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    const text = element.textContent;
+    
+    navigator.clipboard.writeText(text).then(() => {
+        // Show success message
+        const button = event.target.closest('button');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-check me-2"></i>Copied!';
+        button.classList.add('btn-success');
+        button.classList.remove('btn-outline-primary', 'btn-outline-success');
+        
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.classList.remove('btn-success');
+            if (button.id.includes('Resume')) {
+                button.classList.add('btn-outline-primary');
+            } else {
+                button.classList.add('btn-outline-success');
+            }
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+        alert('Failed to copy to clipboard');
+    });
+}
+
+function downloadText(text, filename) {
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+}
+</script>
+{% endblock %}

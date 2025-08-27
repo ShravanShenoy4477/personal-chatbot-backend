@@ -1,0 +1,95 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Backup files
+backups/
+*.bak
+*.backup
+
+# Exports
+exports/
+
+# Processed documents
+processed_documents/
+
+# Structured summaries (can be regenerated)
+structured_summaries/
+
+# Test files
+test_*.py
+debug_*.py
+check_*.py
+*_test.py
+
+# Development files
+start.py
+main_pipeline.py
+enhanced_ingestion_pipeline.py
+context_inference_pipeline.py
+enhanced_context.py
+interactive_builder.py
+resume_generator.py
+generate_master_files.py
+document_processor.py
+enhanced_document_processor.py
+temporal_context.py
+daily_update_pipeline.py

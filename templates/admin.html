@@ -1,0 +1,582 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Panel - Shravan's Personal AI Assistant{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+    }
+    
+    .stats-card .card-body {
+        padding: 1.5rem;
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .action-card {
+        transition: transform 0.2s;
+    }
+    
+    .action-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .system-status {
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .status-healthy {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-warning {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .status-error {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="fas fa-cog me-2"></i>
+                Admin Panel
+            </h2>
+            <span class="system-status status-healthy" id="systemStatus">
+                <i class="fas fa-check-circle me-1"></i>
+                System Healthy
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- System Statistics -->
+<div class="row g-4 mb-5">
+    <div class="col-md-3">
+        <div class="card stats-card h-100">
+            <div class="card-body text-center">
+                <div class="metric-value" id="totalDocuments">-</div>
+                <div class="metric-label">Total Documents</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card stats-card h-100">
+            <div class="card-body text-center">
+                <div class="metric-value" id="totalTokens">-</div>
+                <div class="metric-label">Total Tokens</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card stats-card h-100">
+            <div class="card-body text-center">
+                <div class="metric-value" id="uniqueFiles">-</div>
+                <div class="metric-label">Unique Files</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card stats-card h-100">
+            <div class="card-body text-center">
+                <div class="metric-value" id="totalSessions">-</div>
+                <div class="metric-label">Chat Sessions</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- File Type Distribution -->
+<div class="row g-4 mb-5">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    File Type Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="fileTypeChart">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-chart-pie fa-3x mb-3"></i>
+                        <p>Loading chart...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    Recent Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="recentActivity">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-clock fa-3x mb-3"></i>
+                        <p>Loading activity...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Admin Actions -->
+<div class="row g-4 mb-5">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm action-card h-100">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-search me-2"></i>
+                    Knowledge Base Search
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="searchQuery" class="form-label">Search Query</label>
+                    <input type="text" class="form-control" id="searchQuery" 
+                           placeholder="Enter search terms...">
+                </div>
+                <div class="mb-3">
+                    <label for="searchResults" class="form-label">Number of Results</label>
+                    <select class="form-select" id="searchResults">
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                    </select>
+                </div>
+                <button class="btn btn-info w-100" id="performSearch">
+                    <i class="fas fa-search me-2"></i>
+                    Search
+                </button>
+                
+                <div id="searchResultsContainer" class="mt-3" style="display: none;">
+                    <h6>Search Results:</h6>
+                    <div id="searchResultsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm action-card h-100">
+            <div class="card-header bg-warning text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-plus me-2"></i>
+                    Add Daily Update
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="updateText" class="form-label">Update Text</label>
+                    <textarea class="form-control" id="updateText" rows="3" 
+                              placeholder="What did you accomplish today?"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="updateCategory" class="form-label">Category</label>
+                    <select class="form-select" id="updateCategory">
+                        <option value="daily_update">Daily Update</option>
+                        <option value="project_completion">Project Completion</option>
+                        <option value="skill_development">Skill Development</option>
+                        <option value="achievement">Achievement</option>
+                        <option value="learning">Learning</option>
+                    </select>
+                </div>
+                <button class="btn btn-warning w-100" id="addUpdate">
+                    <i class="fas fa-plus me-2"></i>
+                    Add Update
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Management -->
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm action-card h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-download me-2"></i>
+                    Export Data
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <p class="text-muted mb-3">Export your knowledge base for backup or analysis</p>
+                <button class="btn btn-success" id="exportKnowledgeBase">
+                    <i class="fas fa-download me-2"></i>
+                    Export Knowledge Base
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm action-card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-save me-2"></i>
+                    Create Backup
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <p class="text-muted mb-3">Create a backup of your current knowledge base</p>
+                <button class="btn btn-primary" id="createBackup">
+                    <i class="fas fa-save me-2"></i>
+                    Create Backup
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm action-card h-100">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-trash me-2"></i>
+                    Clear Data
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <p class="text-muted mb-3">Clear all data (use with caution!)</p>
+                <button class="btn btn-outline-danger" id="clearData" 
+                        data-bs-toggle="modal" data-bs-target="#clearDataModal">
+                    <i class="fas fa-trash me-2"></i>
+                    Clear All Data
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Clear Data Confirmation Modal -->
+<div class="modal fade" id="clearDataModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Confirm Data Clear
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Warning:</strong> This action will permanently delete all data from your knowledge base.</p>
+                <p>This includes:</p>
+                <ul>
+                    <li>All processed documents</li>
+                    <li>Chat history</li>
+                    <li>Generated resumes</li>
+                    <li>Daily updates</li>
+                </ul>
+                <p><strong>This action cannot be undone!</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmClearData">
+                    <i class="fas fa-trash me-2"></i>
+                    Clear All Data
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load initial data
+    loadSystemStats();
+    loadFileTypeChart();
+    loadRecentActivity();
+    
+    // Setup event listeners
+    setupEventListeners();
+    
+    // Refresh stats every 30 seconds
+    setInterval(loadSystemStats, 30000);
+});
+
+function setupEventListeners() {
+    // Search functionality
+    document.getElementById('performSearch').addEventListener('click', performSearch);
+    
+    // Add daily update
+    document.getElementById('addUpdate').addEventListener('click', addDailyUpdate);
+    
+    // Export and backup
+    document.getElementById('exportKnowledgeBase').addEventListener('click', exportKnowledgeBase);
+    document.getElementById('createBackup').addEventListener('click', createBackup);
+    
+    // Clear data
+    document.getElementById('confirmClearData').addEventListener('click', clearAllData);
+}
+
+async function loadSystemStats() {
+    try {
+        const response = await fetch('/api/stats');
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Update metrics
+            document.getElementById('totalDocuments').textContent = data.knowledge_base_stats.total_documents;
+            document.getElementById('totalTokens').textContent = data.knowledge_base_stats.total_tokens.toLocaleString();
+            document.getElementById('uniqueFiles').textContent = data.knowledge_base_stats.unique_files;
+            document.getElementById('totalSessions').textContent = data.chatbot_stats.total_sessions;
+            
+            // Update system status
+            updateSystemStatus(data);
+        }
+    } catch (error) {
+        console.error('Error loading stats:', error);
+        updateSystemStatus({ error: true });
+    }
+}
+
+function updateSystemStatus(data) {
+    const statusElement = document.getElementById('systemStatus');
+    
+    if (data.error) {
+        statusElement.className = 'system-status status-error';
+        statusElement.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>System Error';
+    } else if (data.knowledge_base_stats.total_documents === 0) {
+        statusElement.className = 'system-status status-warning';
+        statusElement.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i>No Documents';
+    } else {
+        statusElement.className = 'system-status status-healthy';
+        statusElement.innerHTML = '<i class="fas fa-check-circle me-1"></i>System Healthy';
+    }
+}
+
+async function loadFileTypeChart() {
+    try {
+        const response = await fetch('/api/stats');
+        const data = await response.json();
+        
+        if (response.ok) {
+            const fileTypes = data.knowledge_base_stats.file_types;
+            const chartContainer = document.getElementById('fileTypeChart');
+            
+            if (Object.keys(fileTypes).length === 0) {
+                chartContainer.innerHTML = '<div class="text-center text-muted py-4"><p>No files processed yet</p></div>';
+                return;
+            }
+            
+            let chartHTML = '<div class="row g-2">';
+            for (const [type, count] of Object.entries(fileTypes)) {
+                const percentage = ((count / data.knowledge_base_stats.total_documents) * 100).toFixed(1);
+                chartHTML += `
+                    <div class="col-6">
+                        <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded">
+                            <span class="text-capitalize">${type}</span>
+                            <span class="badge bg-primary">${count} (${percentage}%)</span>
+                        </div>
+                    </div>
+                `;
+            }
+            chartHTML += '</div>';
+            chartContainer.innerHTML = chartHTML;
+        }
+    } catch (error) {
+        console.error('Error loading chart:', error);
+    }
+}
+
+async function loadRecentActivity() {
+    try {
+        const response = await fetch('/api/stats');
+        const data = await response.json();
+        
+        if (response.ok) {
+            const activityContainer = document.getElementById('recentActivity');
+            
+            if (data.chatbot_stats.total_conversations === 0) {
+                activityContainer.innerHTML = '<div class="text-center text-muted py-4"><p>No recent activity</p></div>';
+                return;
+            }
+            
+            let activityHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Total Conversations</span>
+                    <span class="badge bg-primary">${data.chatbot_stats.total_conversations}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Active Sessions</span>
+                    <span class="badge bg-success">${data.chatbot_stats.total_sessions}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>System Uptime</span>
+                    <span class="text-muted">${new Date(data.chatbot_stats.active_since).toLocaleDateString()}</span>
+                </div>
+            `;
+            activityContainer.innerHTML = activityHTML;
+        }
+    } catch (error) {
+        console.error('Error loading activity:', error);
+    }
+}
+
+async function performSearch() {
+    const query = document.getElementById('searchQuery').value.trim();
+    const nResults = parseInt(document.getElementById('searchResults').value);
+    
+    if (!query) {
+        alert('Please enter a search query');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/search?query=${encodeURIComponent(query)}&n_results=${nResults}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            displaySearchResults(data);
+        } else {
+            alert('Search failed: ' + data.detail);
+        }
+    } catch (error) {
+        console.error('Error performing search:', error);
+        alert('Search failed');
+    }
+}
+
+function displaySearchResults(data) {
+    const container = document.getElementById('searchResultsContainer');
+    const list = document.getElementById('searchResultsList');
+    
+    if (data.total_results === 0) {
+        list.innerHTML = '<p class="text-muted">No results found</p>';
+    } else {
+        let resultsHTML = '';
+        data.results.forEach((result, index) => {
+            resultsHTML += `
+                <div class="card mb-2">
+                    <div class="card-body p-2">
+                        <small class="text-muted">Result ${index + 1}</small>
+                        <p class="mb-1">${result.content.substring(0, 150)}...</p>
+                        <small class="text-muted">Source: ${result.metadata.filename}</small>
+                    </div>
+                </div>
+            `;
+        });
+        list.innerHTML = resultsHTML;
+    }
+    
+    container.style.display = 'block';
+}
+
+async function addDailyUpdate() {
+    const updateText = document.getElementById('updateText').value.trim();
+    const category = document.getElementById('updateCategory').value;
+    
+    if (!updateText) {
+        alert('Please enter update text');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/daily-update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                update_text: updateText,
+                category: category
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert('Daily update added successfully!');
+            document.getElementById('updateText').value = '';
+            
+            // Refresh stats
+            loadSystemStats();
+            loadRecentActivity();
+        } else {
+            alert('Failed to add update: ' + data.detail);
+        }
+    } catch (error) {
+        console.error('Error adding update:', error);
+        alert('Failed to add update');
+    }
+}
+
+async function exportKnowledgeBase() {
+    try {
+        const response = await fetch('/api/backup');
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert('Knowledge base exported successfully!');
+        } else {
+            alert('Export failed: ' + data.detail);
+        }
+    } catch (error) {
+        console.error('Error exporting:', error);
+        alert('Export failed');
+    }
+}
+
+async function createBackup() {
+    try {
+        const response = await fetch('/api/backup');
+        const data = await response.json();
+        
+        if (response.ok) {
+            alert('Backup created successfully!');
+        } else {
+            alert('Backup failed: ' + data.detail);
+        }
+    } catch (error) {
+        console.error('Error creating backup:', error);
+        alert('Backup failed');
+    }
+}
+
+async function clearAllData() {
+    if (confirm('Are you absolutely sure you want to clear all data? This cannot be undone!')) {
+        try {
+            // This would need to be implemented in the backend
+            alert('Data clear functionality needs to be implemented in the backend');
+        } catch (error) {
+            console.error('Error clearing data:', error);
+            alert('Failed to clear data');
+        }
+    }
+}
+</script>
+{% endblock %}

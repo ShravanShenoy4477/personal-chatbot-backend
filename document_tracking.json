@@ -1,0 +1,66 @@
+{
+  "e7e7f9a873143dd0f912a9dafbee29a9": {
+    "file_path": "documents/ABB internship-final-report (Cleaned).pdf",
+    "file_name": "ABB internship-final-report (Cleaned).pdf",
+    "chunks_count": 88,
+    "processing_time": 0.1,
+    "parsed_at": "2025-08-26T09:15:30.256412",
+    "status": "completed"
+  },
+  "13f572af0c456df660d45020c9134aa8": {
+    "file_path": "documents/courses_template.csv",
+    "file_name": "courses_template.csv",
+    "chunks_count": 25,
+    "processing_time": 0.1,
+    "parsed_at": "2025-08-26T09:15:39.482906",
+    "status": "completed"
+  },
+  "4d90a5940ddcaf2dd1c1a52000ef52de": {
+    "file_path": "documents/Minor_Project_Final_Report (Cleaned).pdf",
+    "file_name": "Minor_Project_Final_Report (Cleaned).pdf",
+    "chunks_count": 77,
+    "processing_time": 0.1,
+    "parsed_at": "2025-08-26T09:15:51.318058",
+    "status": "completed"
+  },
+  "6c9432cee15d8e09691869c36e3f6fb8": {
+    "file_path": "documents/Shravan Research Tracker.pdf",
+    "file_name": "Shravan Research Tracker.pdf",
+    "chunks_count": 53,
+    "processing_time": 0.1,
+    "parsed_at": "2025-08-26T09:16:06.965924",
+    "status": "completed"
+  },
+  "b5f8d00cab1aca21dac55d4c2ff0e6f3": {
+    "file_path": "documents/IISC Paper (Cleaned).pdf",
+    "file_name": "IISC Paper (Cleaned).pdf",
+    "chunks_count": 62,
+    "processing_time": 0.1,
+    "parsed_at": "2025-08-26T09:16:19.853611",
+    "status": "completed"
+  },
+  "11ea44821946714dbb30f57980ca1370": {
+    "file_path": "documents/Internship Report (Cleaned).pdf",
+    "file_name": "Internship Report (Cleaned).pdf",
+    "chunks_count": 81,
+    "processing_time": 0.1,
+    "parsed_at": "2025-08-26T09:16:32.290340",
+    "status": "completed"
+  },
+  "bb543bf299ed3532ca3575a7a07153c1": {
+    "file_path": "documents/C04_ASHWA_RACING_BPP_SUPPORTING_DOC_REPORT (Cleaned).pdf",
+    "file_name": "C04_ASHWA_RACING_BPP_SUPPORTING_DOC_REPORT (Cleaned).pdf",
+    "chunks_count": 135,
+    "processing_time": 0.1,
+    "parsed_at": "2025-08-26T09:16:46.011550",
+    "status": "completed"
+  },
+  "dcbb023a45a8a39410bd43826b9e4997": {
+    "file_path": "documents/IISC_Paper_Summary.txt",
+    "file_name": "IISC_Paper_Summary.txt",
+    "chunks_count": 6,
+    "processing_time": 0.1,
+    "parsed_at": "2025-08-26T09:16:52.686074",
+    "status": "completed"
+  }
+}
