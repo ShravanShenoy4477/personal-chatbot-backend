@@ -30,6 +30,14 @@ ENV/
 env.bak/
 venv.bak/
 
+# Environment files (CRITICAL - Never commit these!)
+.env
+.env.local
+.env.production
+.env.staging
+.env.development
+*.env
+
 # IDE
 .vscode/
 .idea/

@@ -2,6 +2,16 @@
 
 An innovative AI-powered chatbot that represents your professional background, skills, and experience to recruiters and potential employers. This system creates a comprehensive knowledge base from your documents and provides an interactive interface for authentic representation.
 
+## 🔒 **Security Notice**
+
+This repository is **PUBLIC** and designed to be shared. Your API keys and sensitive data are kept secure through environment variables.
+
+**⚠️ Never commit your `.env` file or API keys!**
+
+- ✅ **Safe to commit**: Code, documentation, templates
+- ❌ **Never commit**: `.env` files, API keys, database files
+- 🔐 **Security guide**: See [SECURITY_SETUP.md](SECURITY_SETUP.md)
+
 ## 🌟 What Makes This Special?
 
 - **Authentic Representation**: No inflated claims or fake experiences - everything is based on your actual documents and input
