@@ -1,7 +1,7 @@
 import os
 import json
 from typing import List, Dict, Any, Optional
-import pandas as pd
+# pandas import removed - using datetime instead
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
 import numpy as np
@@ -456,12 +456,12 @@ class KnowledgeBase:
     
     def export_to_json(self, output_file: str = None):
         """Export the entire knowledge base to JSON"""
-        output_file = output_file or f"knowledge_base_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.json"
+        output_file = output_file or f"knowledge_base_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         
         results = self.collection.get()
         
         export_data = {
-            'export_date': pd.Timestamp.now().isoformat(),
+            'export_date': datetime.now().isoformat(),
             'total_documents': len(results['documents']),
             'documents': []
         }
@@ -490,7 +490,7 @@ class KnowledgeBase:
         backup_path = Path(backup_dir)
         backup_path.mkdir(exist_ok=True)
         
-        backup_file = backup_path / f"knowledge_base_backup_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.json"
+        backup_file = backup_path / f"knowledge_base_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         
         self.export_to_json(str(backup_file))
         print(f"Backup created at: {backup_file}")
