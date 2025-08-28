@@ -5,18 +5,11 @@ from chromadb.config import Settings
 from typing import List, Dict, Any, Optional
 import pandas as pd
 from pathlib import Path
+from sentence_transformers import SentenceTransformer
 import numpy as np
 from datetime import datetime
 import hashlib
 from qdrant_client import QdrantClient, models
-
-# Try to import sentence-transformers, fallback to simple hash-based embeddings
-try:
-    from sentence_transformers import SentenceTransformer
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
-    print("Warning: sentence-transformers not available, using fallback embeddings")
 
 class KnowledgeBase:
     def __init__(self, persist_directory: str = "chroma_db"):
@@ -36,11 +29,7 @@ class KnowledgeBase:
         self.parsed_documents = self._load_tracking_index()
 
         # Initialize embedding model
-        if SENTENCE_TRANSFORMERS_AVAILABLE:
-            self.embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
-        else:
-            self.embedding_model = None
-            print("Using fallback embedding method")
+        self.embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', device='cpu')
 
         if self.backend == "chroma":
             # Get or create collection for Chroma
@@ -74,22 +63,9 @@ class KnowledgeBase:
         else:
             return QdrantClient(url=url)
 
-    def _generate_fallback_embedding(self, text: str) -> List[float]:
-        """Generate a simple hash-based embedding when sentence-transformers is not available"""
-        # Create a deterministic 384-dimensional vector based on text hash
-        text_hash = hash(text) % (2**32)
-        np.random.seed(text_hash)
-        embedding = np.random.normal(0, 1, 384).tolist()
-        # Normalize to unit vector
-        norm = np.linalg.norm(embedding)
-        return [x/norm for x in embedding]
-
     def _encode_text(self, texts: List[str]) -> List[List[float]]:
-        """Encode text to embeddings with fallback"""
-        if self.embedding_model and SENTENCE_TRANSFORMERS_AVAILABLE:
-            return self.embedding_model.encode(texts).tolist()
-        else:
-            return [self._generate_fallback_embedding(text) for text in texts]
+        """Encode text to embeddings using sentence-transformers"""
+        return self.embedding_model.encode(texts).tolist()
     
     def _load_tracking_index(self) -> Dict[str, Any]:
         """Load the document tracking index from disk"""
