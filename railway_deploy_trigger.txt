@@ -1,0 +1,4 @@
+# Railway Deployment Trigger
+# This file ensures Railway detects our latest changes
+# Deploy timestamp: $(date)
+# Status: Ready for Railway deployment
