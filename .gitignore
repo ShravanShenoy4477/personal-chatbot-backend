@@ -101,3 +101,4 @@ document_processor.py
 enhanced_document_processor.py
 temporal_context.py
 daily_update_pipeline.py
+.vercel

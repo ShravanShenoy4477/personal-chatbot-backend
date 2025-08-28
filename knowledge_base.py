@@ -1,8 +1,6 @@
 import os
 import json
-import chromadb
-from chromadb.config import Settings
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 import pandas as pd
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
@@ -10,25 +8,74 @@ import numpy as np
 from datetime import datetime
 import hashlib
 
+# Optional imports for backends
+try:
+    import chromadb
+except Exception:
+    chromadb = None
+
+try:
+    from qdrant_client import QdrantClient
+    from qdrant_client.http import models as qmodels
+except Exception:
+    QdrantClient = None
+    qmodels = None
+
 class KnowledgeBase:
     def __init__(self, persist_directory: str = "chroma_db"):
         self.persist_directory = persist_directory
-        self.client = chromadb.PersistentClient(path=persist_directory)
+
+        # Backend selection: 'chroma' (default) or 'qdrant'
+        self.backend = os.getenv("VECTOR_BACKEND", "chroma").lower()
+
+        # Initialize embedding model
+        self.embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+
+        if self.backend == "qdrant":
+            if QdrantClient is None or qmodels is None:
+                raise RuntimeError("qdrant-client is not installed. Add 'qdrant-client' to requirements.txt")
+
+            qdrant_url = os.getenv("QDRANT_URL")
+            qdrant_api_key = os.getenv("QDRANT_API_KEY")
+            self.qdrant_collection = os.getenv("QDRANT_COLLECTION", "personal_knowledge")
+
+            if not qdrant_url:
+                raise RuntimeError("QDRANT_URL environment variable is required when VECTOR_BACKEND=qdrant")
+
+            self.client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key)
+
+            # Ensure collection exists
+            try:
+                self.client.get_collection(self.qdrant_collection)
+            except Exception:
+                self.client.recreate_collection(
+                    collection_name=self.qdrant_collection,
+                    vectors_config=qmodels.VectorParams(
+                        size=self._embedding_dimension(),
+                        distance=qmodels.Distance.COSINE,
+                    ),
+                )
+            self.collection = None  # Not used for qdrant
+            print(f"Knowledge base initialized with Qdrant collection: {self.qdrant_collection}")
+        else:
+            if chromadb is None:
+                raise RuntimeError("chromadb is not installed. Add 'chromadb' to requirements.txt or set VECTOR_BACKEND=qdrant")
+            self.client = chromadb.PersistentClient(path=persist_directory)
+            # Get or create collection
+            self.collection = self.client.get_or_create_collection(
+                name="personal_knowledge",
+                metadata={"hnsw:space": "cosine"}
+            )
+            print(f"Knowledge base initialized at: {persist_directory}")
         
         # Document tracking system
         self.tracking_file = "document_tracking.json"
         self.parsed_documents = self._load_tracking_index()
         
-        # Initialize embedding model
-        self.embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
-        
-        # Get or create collection
-        self.collection = self.client.get_or_create_collection(
-            name="personal_knowledge",
-            metadata={"hnsw:space": "cosine"}
-        )
-        
-        print(f"Knowledge base initialized at: {persist_directory}")
+    def _embedding_dimension(self) -> int:
+        # Derive embedding dimension by encoding a tiny sample
+        vector = self.embedding_model.encode(["dim"])
+        return int(np.array(vector).shape[-1])
     
     def _load_tracking_index(self) -> Dict[str, Any]:
         """Load the document tracking index from disk"""
@@ -151,14 +198,20 @@ class KnowledgeBase:
         # Generate unique IDs based on source file and timestamp
         import time
         timestamp = int(time.time() * 1000)  # milliseconds
-        base_id = f"doc_{timestamp}"
+        base_id = timestamp
         
         # Process in batches
         for batch_idx in range(0, len(chunks), batch_size):
             batch = chunks[batch_idx:batch_idx + batch_size]
             
             # Prepare batch data with unique IDs
-            ids = [f"{base_id}_chunk_{batch_idx + j}" for j in range(len(batch))]
+            if self.backend == "qdrant":
+                # Qdrant needs integer IDs
+                ids = [base_id + i for i in range(len(batch))]
+            else:
+                # Chroma can use string IDs
+                ids = [f"{base_id}_chunk_{batch_idx + j}" for j in range(len(batch))]
+            
             documents = [chunk['content'] for chunk in batch]
             metadatas = [self._clean_metadata(chunk['metadata']) for chunk in batch]
             
@@ -172,13 +225,29 @@ class KnowledgeBase:
             # Generate embeddings
             embeddings = self.embedding_model.encode(documents).tolist()
             
-            # Add to collection
-            self.collection.add(
-                ids=ids,
-                documents=documents,
-                metadatas=metadatas,
-                embeddings=embeddings
-            )
+            if self.backend == "qdrant":
+                # Upsert into Qdrant
+                points = []
+                for i in range(len(documents)):
+                    points.append(
+                        qmodels.PointStruct(
+                            id=ids[i],
+                            vector=embeddings[i],
+                            payload={
+                                "content": documents[i],
+                                **metadatas[i],
+                            },
+                        )
+                    )
+                self.client.upsert(collection_name=self.qdrant_collection, points=points)
+            else:
+                # Add to Chroma collection
+                self.collection.add(
+                    ids=ids,
+                    documents=documents,
+                    metadatas=metadatas,
+                    embeddings=embeddings
+                )
             
             print(f"Added batch {batch_idx//batch_size + 1}/{(len(chunks) + batch_size - 1)//batch_size}")
         
@@ -197,36 +266,64 @@ class KnowledgeBase:
             # Generate query embedding
             query_embedding = self.embedding_model.encode([query]).tolist()
             
-            # Perform search
-            results = self.collection.query(
-                query_embeddings=query_embedding,
-                n_results=n_results,
-                where=filter_metadata
-            )
-            
-            # Format results - ChromaDB returns nested lists
-            formatted_results = []
-            
-            if results and 'documents' in results:
-                documents = results['documents']
-                metadatas = results.get('metadatas', [])
-                distances = results.get('distances', [])
+            if self.backend == "qdrant":
+                # Build filter
+                q_filter = None
+                if filter_metadata:
+                    must = []
+                    for k, v in filter_metadata.items():
+                        must.append(qmodels.FieldCondition(key=k, match=qmodels.MatchValue(value=v)))
+                    q_filter = qmodels.Filter(must=must)
+
+                search_result = self.client.search(
+                    collection_name=self.qdrant_collection,
+                    query_vector=query_embedding[0],
+                    limit=n_results,
+                    with_payload=True,
+                    with_vectors=False,
+                    query_filter=q_filter,
+                )
+                formatted_results = []
+                for pt in search_result:
+                    payload = pt.payload or {}
+                    content = payload.pop("content", "")
+                    formatted_results.append({
+                        "content": content,
+                        "metadata": payload,
+                        "distance": float(pt.score),
+                    })
+                return formatted_results
+            else:
+                # Perform search in Chroma
+                results = self.collection.query(
+                    query_embeddings=query_embedding,
+                    n_results=n_results,
+                    where=filter_metadata
+                )
                 
-                # ChromaDB returns: documents[0] = list of actual documents
-                if isinstance(documents, list) and len(documents) > 0 and isinstance(documents[0], list):
-                    doc_list = documents[0]
-                    meta_list = metadatas[0] if metadatas and len(metadatas) > 0 else []
-                    dist_list = distances[0] if distances and len(distances) > 0 else []
+                # Format results - ChromaDB returns nested lists
+                formatted_results = []
+                
+                if results and 'documents' in results:
+                    documents = results['documents']
+                    metadatas = results.get('metadatas', [])
+                    distances = results.get('distances', [])
                     
-                    for i in range(len(doc_list)):
-                        result = {
-                            'content': doc_list[i],
-                            'metadata': meta_list[i] if i < len(meta_list) else {},
-                            'distance': dist_list[i] if i < len(dist_list) else 0.0
-                        }
-                        formatted_results.append(result)
-            
-            return formatted_results
+                    # ChromaDB returns: documents[0] = list of actual documents
+                    if isinstance(documents, list) and len(documents) > 0 and isinstance(documents[0], list):
+                        doc_list = documents[0]
+                        meta_list = metadatas[0] if metadatas and len(metadatas) > 0 else []
+                        dist_list = distances[0] if distances and len(distances) > 0 else []
+                        
+                        for i in range(len(doc_list)):
+                            result = {
+                                'content': doc_list[i],
+                                'metadata': meta_list[i] if i < len(meta_list) else {},
+                                'distance': dist_list[i] if i < len(dist_list) else 0.0
+                            }
+                            formatted_results.append(result)
+                
+                return formatted_results
             
         except Exception as e:
             print(f"❌ Search error: {e}")
@@ -235,6 +332,24 @@ class KnowledgeBase:
     def get_all_documents(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """Retrieve all documents from the knowledge base"""
         try:
+            if self.backend == "qdrant":
+                scroll = self.client.scroll(
+                    collection_name=self.qdrant_collection,
+                    with_payload=True,
+                    with_vectors=False,
+                    limit=limit or 1000,
+                )
+                points = scroll[0]
+                formatted_results = []
+                for pt in points:
+                    payload = pt.payload or {}
+                    content = payload.pop("content", "")
+                    formatted_results.append({
+                        'content': content,
+                        'metadata': payload,
+                        'id': str(pt.id),
+                    })
+                return formatted_results
             results = self.collection.get()
             
             formatted_results = []
@@ -284,11 +399,33 @@ class KnowledgeBase:
     
     def delete_document(self, doc_id: str):
         """Delete a document from the knowledge base"""
+        if self.backend == "qdrant":
+            self.client.delete(collection_name=self.qdrant_collection, points_selector=qmodels.PointIdsList(points=[doc_id]))
+            print(f"Deleted document: {doc_id}")
+            return
         self.collection.delete(ids=[doc_id])
         print(f"Deleted document: {doc_id}")
     
     def get_statistics(self) -> Dict[str, Any]:
         """Get statistics about the knowledge base"""
+        if self.backend == "qdrant":
+            count = self.client.count(self.qdrant_collection).count
+            # For tokens and metadata distributions, do a limited scroll (approximate)
+            docs = self.get_all_documents(limit=1000)
+            stats = {
+                'total_documents': count,
+                'total_tokens': sum(len(doc['content'].split()) for doc in docs),
+                'file_types': {},
+                'sources': set(),
+            }
+            for r in docs:
+                meta = r.get('metadata', {})
+                file_type = meta.get('file_type', 'unknown')
+                stats['file_types'][file_type] = stats['file_types'].get(file_type, 0) + 1
+                stats['sources'].add(meta.get('source', 'unknown'))
+            stats['sources'] = list(stats['sources'])
+            stats['unique_files'] = len(stats['sources'])
+            return stats
         results = self.collection.get()
         
         stats = {

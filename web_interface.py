@@ -12,7 +12,10 @@ import os
 from config import Config
 from chatbot import PersonalChatbot
 from knowledge_base import KnowledgeBase
-from resume_generator import ResumeGenerator
+try:
+    from resume_generator import ResumeGenerator
+except Exception:
+    ResumeGenerator = None  # Optional in production
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -21,11 +24,27 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# CORS (allow GitHub Pages frontend)
+try:
+    from fastapi.middleware.cors import CORSMiddleware
+    allowed_origins = [
+        "*",  # Replace with your exact site for tighter security, e.g., "https://shravanshenoy4477.github.io"
+    ]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+except Exception:
+    pass
+
 # Initialize components
 config = Config()
 chatbot = PersonalChatbot()
 knowledge_base = KnowledgeBase()
-resume_generator = ResumeGenerator()
+resume_generator = ResumeGenerator() if ResumeGenerator is not None else None
 
 # Mount static files and templates
 templates = Jinja2Templates(directory="templates")
@@ -62,6 +81,8 @@ async def chat_page(request: Request):
 @app.get("/resume", response_class=HTMLResponse)
 async def resume_page(request: Request):
     """Resume generator page"""
+    if resume_generator is None:
+        return templates.TemplateResponse("chat.html", {"request": request})
     return templates.TemplateResponse("resume.html", {"request": request})
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -95,6 +116,8 @@ async def chat_endpoint(request: ChatRequest):
 @app.post("/api/resume/generate")
 async def generate_resume(request: ResumeRequest):
     """Generate tailored resume"""
+    if resume_generator is None:
+        raise HTTPException(status_code=501, detail="Resume generation not available in this deployment")
     try:
         resume_data = resume_generator.generate_tailored_resume(
             job_description=request.job_description,
@@ -123,6 +146,8 @@ async def generate_resume(request: ResumeRequest):
 @app.post("/api/resume/cover-letter")
 async def generate_cover_letter(request: ResumeRequest):
     """Generate cover letter"""
+    if resume_generator is None:
+        raise HTTPException(status_code=501, detail="Cover letter generation not available in this deployment")
     try:
         # First generate resume to get context
         resume_data = resume_generator.generate_tailored_resume(
@@ -198,9 +223,10 @@ async def get_stats():
 
 @app.get("/api/search")
 async def search_knowledge_base(query: str, n_results: int = 5):
-    """Search knowledge base"""
+    """Search knowledge base using intelligent context retrieval"""
     try:
-        results = knowledge_base.search(query, n_results)
+        # Use the chatbot's intelligent context retrieval instead of basic search
+        results = chatbot.get_relevant_context(query, n_results)
         return {
             "query": query,
             "results": results,
