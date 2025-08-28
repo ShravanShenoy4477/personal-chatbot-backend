@@ -1,81 +1,95 @@
 import os
 import json
-from typing import List, Dict, Any, Optional, Tuple
+import chromadb
+from chromadb.config import Settings
+from typing import List, Dict, Any, Optional
 import pandas as pd
 from pathlib import Path
-from sentence_transformers import SentenceTransformer
 import numpy as np
 from datetime import datetime
 import hashlib
+from qdrant_client import QdrantClient, models
 
-# Optional imports for backends
+# Try to import sentence-transformers, fallback to simple hash-based embeddings
 try:
-    import chromadb
-except Exception:
-    chromadb = None
-
-try:
-    from qdrant_client import QdrantClient
-    from qdrant_client.http import models as qmodels
-except Exception:
-    QdrantClient = None
-    qmodels = None
+    from sentence_transformers import SentenceTransformer
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+    print("Warning: sentence-transformers not available, using fallback embeddings")
 
 class KnowledgeBase:
     def __init__(self, persist_directory: str = "chroma_db"):
         self.persist_directory = persist_directory
-
-        # Backend selection: 'chroma' (default) or 'qdrant'
         self.backend = os.getenv("VECTOR_BACKEND", "chroma").lower()
-
-        # Initialize embedding model
-        self.embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+        self.qdrant_collection = os.getenv("QDRANT_COLLECTION", "personal_knowledge")
 
         if self.backend == "qdrant":
-            if QdrantClient is None or qmodels is None:
-                raise RuntimeError("qdrant-client is not installed. Add 'qdrant-client' to requirements.txt")
-
-            qdrant_url = os.getenv("QDRANT_URL")
-            qdrant_api_key = os.getenv("QDRANT_API_KEY")
-            self.qdrant_collection = os.getenv("QDRANT_COLLECTION", "personal_knowledge")
-
-            if not qdrant_url:
-                raise RuntimeError("QDRANT_URL environment variable is required when VECTOR_BACKEND=qdrant")
-
-            self.client = QdrantClient(url=qdrant_url, api_key=qdrant_api_key)
-
-            # Ensure collection exists
-            try:
-                self.client.get_collection(self.qdrant_collection)
-            except Exception:
-                self.client.recreate_collection(
-                    collection_name=self.qdrant_collection,
-                    vectors_config=qmodels.VectorParams(
-                        size=self._embedding_dimension(),
-                        distance=qmodels.Distance.COSINE,
-                    ),
-                )
-            self.collection = None  # Not used for qdrant
+            self.client = self._get_qdrant_client()
             print(f"Knowledge base initialized with Qdrant collection: {self.qdrant_collection}")
         else:
-            if chromadb is None:
-                raise RuntimeError("chromadb is not installed. Add 'chromadb' to requirements.txt or set VECTOR_BACKEND=qdrant")
             self.client = chromadb.PersistentClient(path=persist_directory)
-            # Get or create collection
+            print(f"Knowledge base initialized at: {persist_directory}")
+
+        # Document tracking system (still local for now)
+        self.tracking_file = "document_tracking.json"
+        self.parsed_documents = self._load_tracking_index()
+
+        # Initialize embedding model
+        if SENTENCE_TRANSFORMERS_AVAILABLE:
+            self.embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+        else:
+            self.embedding_model = None
+            print("Using fallback embedding method")
+
+        if self.backend == "chroma":
+            # Get or create collection for Chroma
             self.collection = self.client.get_or_create_collection(
                 name="personal_knowledge",
                 metadata={"hnsw:space": "cosine"}
             )
-            print(f"Knowledge base initialized at: {persist_directory}")
+        elif self.backend == "qdrant":
+            # Ensure Qdrant collection exists or create it
+            try:
+                self.client.get_collection(collection_name=self.qdrant_collection)
+                print(f"Qdrant collection '{self.qdrant_collection}' already exists.")
+            except Exception:
+                print(f"Qdrant collection '{self.qdrant_collection}' not found, creating...")
+                self.client.recreate_collection(
+                    collection_name=self.qdrant_collection,
+                    vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE),
+                )
+                print(f"Qdrant collection '{self.qdrant_collection}' created.")
+
+    def _get_qdrant_client(self):
+        """Get Qdrant client with environment variables"""
+        url = os.getenv("QDRANT_URL")
+        api_key = os.getenv("QDRANT_API_KEY")
         
-        # Document tracking system
-        self.tracking_file = "document_tracking.json"
-        self.parsed_documents = self._load_tracking_index()
+        if not url:
+            raise ValueError("QDRANT_URL environment variable not set")
         
-    def _embedding_dimension(self) -> int:
-        # Derive embedding dimension by encoding a tiny sample
-        vector = self.embedding_model.encode(["dim"])
-        return int(np.array(vector).shape[-1])
+        if api_key:
+            return QdrantClient(url=url, api_key=api_key)
+        else:
+            return QdrantClient(url=url)
+
+    def _generate_fallback_embedding(self, text: str) -> List[float]:
+        """Generate a simple hash-based embedding when sentence-transformers is not available"""
+        # Create a deterministic 384-dimensional vector based on text hash
+        text_hash = hash(text) % (2**32)
+        np.random.seed(text_hash)
+        embedding = np.random.normal(0, 1, 384).tolist()
+        # Normalize to unit vector
+        norm = np.linalg.norm(embedding)
+        return [x/norm for x in embedding]
+
+    def _encode_text(self, texts: List[str]) -> List[List[float]]:
+        """Encode text to embeddings with fallback"""
+        if self.embedding_model and SENTENCE_TRANSFORMERS_AVAILABLE:
+            return self.embedding_model.encode(texts).tolist()
+        else:
+            return [self._generate_fallback_embedding(text) for text in texts]
     
     def _load_tracking_index(self) -> Dict[str, Any]:
         """Load the document tracking index from disk"""
@@ -223,14 +237,14 @@ class KnowledgeBase:
                         metadatas[i][key] = str(value)
             
             # Generate embeddings
-            embeddings = self.embedding_model.encode(documents).tolist()
+            embeddings = self._encode_text(documents)
             
             if self.backend == "qdrant":
                 # Upsert into Qdrant
                 points = []
                 for i in range(len(documents)):
                     points.append(
-                        qmodels.PointStruct(
+                        models.PointStruct(
                             id=ids[i],
                             vector=embeddings[i],
                             payload={
@@ -264,7 +278,7 @@ class KnowledgeBase:
         """Search the knowledge base for relevant information"""
         try:
             # Generate query embedding
-            query_embedding = self.embedding_model.encode([query]).tolist()
+            query_embedding = self._encode_text([query])[0]
             
             if self.backend == "qdrant":
                 # Build filter
@@ -272,12 +286,12 @@ class KnowledgeBase:
                 if filter_metadata:
                     must = []
                     for k, v in filter_metadata.items():
-                        must.append(qmodels.FieldCondition(key=k, match=qmodels.MatchValue(value=v)))
-                    q_filter = qmodels.Filter(must=must)
+                        must.append(models.FieldCondition(key=k, match=models.MatchValue(value=v)))
+                    q_filter = models.Filter(must=must)
 
                 search_result = self.client.search(
                     collection_name=self.qdrant_collection,
-                    query_vector=query_embedding[0],
+                    query_vector=query_embedding,
                     limit=n_results,
                     with_payload=True,
                     with_vectors=False,
@@ -378,7 +392,7 @@ class KnowledgeBase:
     def update_document(self, doc_id: str, new_content: str, new_metadata: Optional[Dict] = None):
         """Update an existing document"""
         # Generate new embedding
-        new_embedding = self.embedding_model.encode([new_content]).tolist()
+        new_embedding = self._encode_text([new_content])[0]
         
         # Update metadata if provided
         if new_metadata:
@@ -400,7 +414,7 @@ class KnowledgeBase:
     def delete_document(self, doc_id: str):
         """Delete a document from the knowledge base"""
         if self.backend == "qdrant":
-            self.client.delete(collection_name=self.qdrant_collection, points_selector=qmodels.PointIdsList(points=[doc_id]))
+            self.client.delete(collection_name=self.qdrant_collection, points_selector=models.PointIdsList(points=[doc_id]))
             print(f"Deleted document: {doc_id}")
             return
         self.collection.delete(ids=[doc_id])
