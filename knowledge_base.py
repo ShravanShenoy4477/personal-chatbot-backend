@@ -1,7 +1,5 @@
 import os
 import json
-import chromadb
-from chromadb.config import Settings
 from typing import List, Dict, Any, Optional
 import pandas as pd
 from pathlib import Path
@@ -10,6 +8,16 @@ import numpy as np
 from datetime import datetime
 import hashlib
 from qdrant_client import QdrantClient, models
+
+# Conditional imports for backends
+try:
+    import chromadb
+    from chromadb.config import Settings
+    CHROMADB_AVAILABLE = True
+except ImportError:
+    CHROMADB_AVAILABLE = False
+    chromadb = None
+    Settings = None
 
 class KnowledgeBase:
     def __init__(self, persist_directory: str = "chroma_db"):
@@ -21,6 +29,8 @@ class KnowledgeBase:
             self.client = self._get_qdrant_client()
             print(f"Knowledge base initialized with Qdrant collection: {self.qdrant_collection}")
         else:
+            if not CHROMADB_AVAILABLE:
+                raise RuntimeError("ChromaDB backend requested but chromadb is not installed. Set VECTOR_BACKEND=qdrant or install chromadb.")
             self.client = chromadb.PersistentClient(path=persist_directory)
             print(f"Knowledge base initialized at: {persist_directory}")
 
@@ -32,6 +42,8 @@ class KnowledgeBase:
         self.embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', device='cpu')
 
         if self.backend == "chroma":
+            if not CHROMADB_AVAILABLE:
+                raise RuntimeError("ChromaDB backend requested but chromadb is not installed. Set VECTOR_BACKEND=qdrant or install chromadb.")
             # Get or create collection for Chroma
             self.collection = self.client.get_or_create_collection(
                 name="personal_knowledge",
