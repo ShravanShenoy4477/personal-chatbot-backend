@@ -1,4 +1,5 @@
 # Railway Deployment Trigger
 # This file ensures Railway detects our latest changes
-# Deploy timestamp: $(date)
-# Status: Ready for Railway deployment
+# Deploy timestamp: 2024-01-01
+# Status: Ready for Railway deployment with environment variables
+# Environment variables added: GOOGLE_API_KEY, QDRANT_URL, QDRANT_API_KEY, QDRANT_COLLECTION
