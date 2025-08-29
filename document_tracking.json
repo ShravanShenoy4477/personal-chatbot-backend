@@ -2,65 +2,65 @@
   "e7e7f9a873143dd0f912a9dafbee29a9": {
     "file_path": "documents/ABB internship-final-report (Cleaned).pdf",
     "file_name": "ABB internship-final-report (Cleaned).pdf",
-    "chunks_count": 88,
+    "chunks_count": 12,
     "processing_time": 0.1,
-    "parsed_at": "2025-08-26T09:15:30.256412",
+    "parsed_at": "2025-08-29T09:08:57.594909",
     "status": "completed"
   },
   "13f572af0c456df660d45020c9134aa8": {
     "file_path": "documents/courses_template.csv",
     "file_name": "courses_template.csv",
-    "chunks_count": 25,
+    "chunks_count": 3,
     "processing_time": 0.1,
-    "parsed_at": "2025-08-26T09:15:39.482906",
+    "parsed_at": "2025-08-29T09:09:14.243948",
     "status": "completed"
   },
   "4d90a5940ddcaf2dd1c1a52000ef52de": {
     "file_path": "documents/Minor_Project_Final_Report (Cleaned).pdf",
     "file_name": "Minor_Project_Final_Report (Cleaned).pdf",
-    "chunks_count": 77,
+    "chunks_count": 11,
     "processing_time": 0.1,
-    "parsed_at": "2025-08-26T09:15:51.318058",
+    "parsed_at": "2025-08-29T09:11:38.548378",
     "status": "completed"
   },
   "6c9432cee15d8e09691869c36e3f6fb8": {
     "file_path": "documents/Shravan Research Tracker.pdf",
     "file_name": "Shravan Research Tracker.pdf",
-    "chunks_count": 53,
+    "chunks_count": 7,
     "processing_time": 0.1,
-    "parsed_at": "2025-08-26T09:16:06.965924",
+    "parsed_at": "2025-08-29T09:18:50.512689",
     "status": "completed"
   },
   "b5f8d00cab1aca21dac55d4c2ff0e6f3": {
     "file_path": "documents/IISC Paper (Cleaned).pdf",
     "file_name": "IISC Paper (Cleaned).pdf",
-    "chunks_count": 62,
+    "chunks_count": 9,
     "processing_time": 0.1,
-    "parsed_at": "2025-08-26T09:16:19.853611",
+    "parsed_at": "2025-08-29T09:36:05.915484",
     "status": "completed"
   },
   "11ea44821946714dbb30f57980ca1370": {
     "file_path": "documents/Internship Report (Cleaned).pdf",
     "file_name": "Internship Report (Cleaned).pdf",
-    "chunks_count": 81,
+    "chunks_count": 11,
     "processing_time": 0.1,
-    "parsed_at": "2025-08-26T09:16:32.290340",
+    "parsed_at": "2025-08-29T09:41:07.045751",
     "status": "completed"
   },
   "bb543bf299ed3532ca3575a7a07153c1": {
     "file_path": "documents/C04_ASHWA_RACING_BPP_SUPPORTING_DOC_REPORT (Cleaned).pdf",
     "file_name": "C04_ASHWA_RACING_BPP_SUPPORTING_DOC_REPORT (Cleaned).pdf",
-    "chunks_count": 135,
+    "chunks_count": 64,
     "processing_time": 0.1,
-    "parsed_at": "2025-08-26T09:16:46.011550",
+    "parsed_at": "2025-08-29T09:41:25.263042",
     "status": "completed"
   },
   "dcbb023a45a8a39410bd43826b9e4997": {
     "file_path": "documents/IISC_Paper_Summary.txt",
     "file_name": "IISC_Paper_Summary.txt",
-    "chunks_count": 6,
+    "chunks_count": 1,
     "processing_time": 0.1,
-    "parsed_at": "2025-08-26T09:16:52.686074",
+    "parsed_at": "2025-08-29T09:41:47.433208",
     "status": "completed"
   }
 }
