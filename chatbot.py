@@ -27,26 +27,68 @@ class PersonalChatbot:
         # Chat history for context
         self.chat_histories = {}  # Track conversations by session_id
         
+
+        
         # System prompt for the chatbot
         self.system_prompt = """You are Shravan Shenoy's personal AI representative, designed to help recruiters and potential employers understand his background, skills, and experience.
 
 Your personality should be:
-- Professional yet approachable
+- Professional and direct
 - Knowledgeable about Shravan's background
-- Enthusiastic about his work and achievements
+- Factual and objective about his work
 - Honest and transparent about his experience level
 - Helpful in answering questions about his capabilities
 
 Key guidelines:
 1. Always base your responses on the information available in the knowledge base
 2. If you're unsure about something, say so rather than making assumptions
-3. Highlight specific examples and achievements when relevant
+3. Provide specific examples and achievements when relevant
 4. Be conversational but maintain professionalism
 5. Ask clarifying questions if needed to provide better answers
-6. Show enthusiasm for Shravan's work and potential opportunities
+6. Present information factually without overselling or excessive enthusiasm
 7. Consider temporal context when discussing experiences - distinguish between current ongoing work and completed past projects
+8. IMPORTANT: Current date is August 2025. Work starting in 2025 (like DRCL research starting 03/2025) is CURRENT ongoing work, not future work.
 
-Remember: You are representing Shravan, so be authentic and honest about his experience level and capabilities."""
+Response format:
+- Keep responses crisp and concise
+- Pack details efficiently without verbosity
+- Use bullet points for lists when appropriate
+- Avoid asterisks (*) around words
+- Present achievements factually without exaggeration
+- Focus on concrete skills, technologies, and outcomes
+
+Remember: You are representing Shravan, so be authentic, honest, and professional about his experience level and capabilities."""
+
+    def _get_current_date_context(self) -> dict:
+        """Get current date context for temporal reasoning"""
+        from datetime import datetime
+        now = datetime.now()
+        return {
+            'current_year': now.year,
+            'current_month': now.month,
+            'current_date': now.strftime('%B %Y'),
+            'is_2025': now.year == 2025,
+            'is_2024': now.year == 2024
+        }
+    
+    def _is_current_work(self, start_date: str, end_date: str) -> bool:
+        """Determine if work is current based on dates and current date context"""
+        if not start_date:
+            return False
+        
+        # Check if explicitly marked as ongoing
+        if end_date and any(word in str(end_date).lower() for word in ['ongoing', 'current', 'present']):
+            return True
+        
+        # Check if work started in current year (2025)
+        if '2025' in str(start_date):
+            return True
+        
+        # Check if work started in recent past and is ongoing
+        if '2024' in str(start_date) and (not end_date or 'ongoing' in str(end_date).lower()):
+            return True
+        
+        return False
 
     def get_relevant_context(self, query: str, n_results: int = 5) -> List[Dict[str, Any]]:
         """Get relevant context from knowledge base for a query"""
@@ -254,10 +296,13 @@ Remember: You are representing Shravan, so be authentic and honest about his exp
                     
                     # Current work queries should prioritize recent/ongoing work
                     if 'current' in query_lower:
-                        if '2024' in start_date or '2025' in start_date:
-                            score += 3.0
+                        # Current date is August 2025, so 2025 work is current, 2024 is recent past
+                        if '2025' in start_date:
+                            score += 4.0  # Current year gets highest priority
+                        elif '2024' in start_date:
+                            score += 2.5  # Recent past gets medium priority
                         elif '2023' in start_date:
-                            score += 1.5
+                            score += 1.5  # Older past gets lower priority
                     
                     # Past work queries should prioritize completed work
                     if any(word in query_lower for word in ['past', 'previous', 'completed', 'finished']):
@@ -315,9 +360,13 @@ Remember: You are representing Shravan, so be authentic and honest about his exp
                 if 'sam2' in query_lower and 'sam2' in content:
                     score += 8.0
                 
-                # Special boost for current work in current experience
-                if 'current' in query_lower and metadata.get('experience_type') == 'current':
-                    score += 2.0
+                # Special boost for current work based on actual dates
+                if 'current' in query_lower:
+                    timeline = metadata.get('timeline', {})
+                    start_date = timeline.get('start', '')
+                    end_date = timeline.get('end', '')
+                    if self._is_current_work(start_date, end_date):
+                        score += 3.0  # Higher boost for actually current work
                 
                 # Special boost for courses in academic documents
                 if query_is_course_related and 'course' in content:
