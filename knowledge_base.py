@@ -39,8 +39,8 @@ class KnowledgeBase:
         self.parsed_documents = self._load_tracking_index()
 
         # Initialize embedding model
-        # Use a smaller model to fit Railway's 4GB limit
-        self.embedding_model = SentenceTransformer('sentence-transformers/paraphrase-MiniLM-L3-v2', device='cpu')
+        # Use the larger, more powerful model for better search quality
+        self.embedding_model = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2', device='cpu')
 
         if self.backend == "chroma":
             if not CHROMADB_AVAILABLE:
