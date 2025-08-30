@@ -44,20 +44,18 @@ def create_railway_app():
             print(f"❌ Config import failed: {e}")
             raise
         
-        # 2. Test knowledge base
+        # 2. Test knowledge base import (instance will be created by web_interface)
         try:
             from knowledge_base import KnowledgeBase
-            kb = KnowledgeBase()
-            print("✅ Knowledge base initialized")
+            print("✅ Knowledge base class imported successfully")
         except Exception as e:
             print(f"❌ Knowledge base import failed: {e}")
             raise
         
-        # 3. Test chatbot
+        # 3. Test chatbot import (instance will be created by web_interface)
         try:
             from chatbot import PersonalChatbot
-            chatbot = PersonalChatbot()
-            print("✅ Chatbot initialized")
+            print("✅ Chatbot class imported successfully")
         except Exception as e:
             print(f"❌ Chatbot import failed: {e}")
             raise
