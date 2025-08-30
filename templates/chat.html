@@ -100,8 +100,24 @@
                     <span class="typing-dots">Thinking</span>
                 </div>
                 
-                <!-- Chat Input -->
+                <!-- Learning Mode Toggle and Chat Input -->
                 <div class="p-3 border-top">
+                    <!-- Learning Mode Toggle -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="learningModeToggle">
+                            <label class="form-check-label" for="learningModeToggle">
+                                <i class="fas fa-brain me-2"></i>
+                                <strong>Learning Mode</strong>
+                            </label>
+                        </div>
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Enable to help improve the chatbot's knowledge
+                        </small>
+                    </div>
+                    
+                    <!-- Chat Input Form -->
                     <form id="chatForm" class="d-flex gap-2">
                         <input type="text" 
                                class="form-control" 
@@ -190,6 +206,12 @@
 {% block extra_js %}
 <script>
 let currentSessionId = null;
+let learningModeEnabled = false;
+let currentConversationContext = {
+    lastQuestion: '',
+    lastResponse: '',
+    sessionId: null
+};
 
 // Initialize chat
 document.addEventListener('DOMContentLoaded', function() {
@@ -206,6 +228,16 @@ document.addEventListener('DOMContentLoaded', function() {
 function setupEventListeners() {
     // Chat form submission
     document.getElementById('chatForm').addEventListener('submit', handleChatSubmit);
+    
+    // Learning mode toggle
+    document.getElementById('learningModeToggle').addEventListener('change', function() {
+        learningModeEnabled = this.checked;
+        if (learningModeEnabled) {
+            addMessage('<strong>Learning mode enabled!</strong> I\'ll learn from your feedback to improve my responses.', 'system');
+        } else {
+            addMessage('<strong>Learning mode disabled.</strong>', 'system');
+        }
+    });
     
     // Quick question buttons
     document.querySelectorAll('.quick-question').forEach(button => {
@@ -229,6 +261,10 @@ async function handleChatSubmit(event) {
     const message = messageInput.value.trim();
     
     if (!message) return;
+    
+    // Store conversation context for learning
+    currentConversationContext.lastQuestion = message;
+    currentConversationContext.sessionId = currentSessionId;
     
     // Add user message to chat
     addMessage(message, 'user');
@@ -255,6 +291,9 @@ async function handleChatSubmit(event) {
         const data = await response.json();
         
         if (response.ok) {
+            // Store response context for learning
+            currentConversationContext.lastResponse = data.response;
+            
             // Add AI response to chat
             addMessage(data.response, 'assistant');
         } else {
@@ -275,10 +314,101 @@ function addMessage(content, type) {
     messageDiv.className = `message ${type}`;
     messageDiv.innerHTML = content;
     
+    // Add feedback buttons for assistant messages if learning mode is enabled
+    if (type === 'assistant' && learningModeEnabled) {
+        const feedbackDiv = document.createElement('div');
+        feedbackDiv.className = 'message-feedback mt-2';
+        feedbackDiv.innerHTML = `
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-success feedback-btn" data-feedback="correct">
+                    <i class="fas fa-check me-1"></i>Correct
+                </button>
+                <button class="btn btn-sm btn-outline-warning feedback-btn" data-feedback="needs-improvement">
+                    <i class="fas fa-edit me-1"></i>Needs Improvement
+                </button>
+                <button class="btn btn-sm btn-outline-danger feedback-btn" data-feedback="incorrect">
+                    <i class="fas fa-times me-1"></i>Incorrect
+                </button>
+            </div>
+        `;
+        
+        // Add event listeners to feedback buttons
+        feedbackDiv.querySelectorAll('.feedback-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                handleFeedback(this.dataset.feedback, content);
+            });
+        });
+        
+        messageDiv.appendChild(feedbackDiv);
+    }
+    
     chatContainer.appendChild(messageDiv);
     
     // Scroll to bottom
     chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+async function handleFeedback(feedbackType, responseContent) {
+    if (!learningModeEnabled) return;
+    
+    let correctionPrompt = '';
+    let feedbackMessage = '';
+    
+    switch (feedbackType) {
+        case 'correct':
+            feedbackMessage = '✅ Great! I\'m glad I got that right.';
+            break;
+        case 'needs-improvement':
+            correctionPrompt = prompt('How could I improve this response?');
+            if (correctionPrompt) {
+                feedbackMessage = '📝 Thank you for the feedback! I\'ll learn from this.';
+                await submitLearningFeedback('needs-improvement', correctionPrompt);
+            }
+            break;
+        case 'incorrect':
+            correctionPrompt = prompt('What\'s the correct information?');
+            if (correctionPrompt) {
+                feedbackMessage = '🧠 Thank you for the correction! I\'ll update my knowledge.';
+                await submitLearningFeedback('incorrect', correctionPrompt);
+            }
+            break;
+    }
+    
+    if (feedbackMessage) {
+        addMessage(feedbackMessage, 'system');
+    }
+}
+
+async function submitLearningFeedback(feedbackType, correction) {
+    try {
+        const response = await fetch('/api/learning/feedback', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                session_id: currentSessionId,
+                original_question: currentConversationContext.lastQuestion,
+                original_response: currentConversationContext.lastResponse,
+                correction: correction,
+                context: `Feedback type: ${feedbackType}`,
+                category: 'user_correction'
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            console.log('Feedback submitted successfully:', data);
+            addMessage('💾 Feedback saved! This will help me give better responses in the future.', 'system');
+        } else {
+            console.error('Error submitting feedback:', data);
+            addMessage('⚠️ Error saving feedback. Please try again.', 'system');
+        }
+    } catch (error) {
+        console.error('Error submitting feedback:', error);
+        addMessage('⚠️ Error saving feedback. Please try again.', 'system');
+    }
 }
 
 function showTypingIndicator() {

@@ -67,6 +67,20 @@ class DailyUpdateRequest(BaseModel):
     update_text: str
     category: Optional[str] = "daily_update"
 
+class LearningFeedbackRequest(BaseModel):
+    session_id: str
+    original_question: str
+    original_response: str
+    correction: str
+    context: Optional[str] = None
+    category: Optional[str] = "user_correction"
+
+class KnowledgeUpdateRequest(BaseModel):
+    content: str
+    metadata: Dict[str, Any]
+    source: str = "user_feedback"
+    category: str = "knowledge_update"
+
 # API Routes
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
@@ -285,6 +299,104 @@ async def backup_knowledge_base():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Backup error: {str(e)}")
+
+@app.post("/api/learning/feedback")
+async def submit_learning_feedback(request: LearningFeedbackRequest):
+    """Submit feedback to improve the chatbot's knowledge"""
+    try:
+        # Store feedback for learning
+        feedback_data = {
+            'session_id': request.session_id,
+            'original_question': request.original_question,
+            'original_response': request.original_response,
+            'correction': request.correction,
+            'context': request.context,
+            'category': request.category,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        # Add to knowledge base as a learning entry
+        learning_chunk = knowledge_base.add_documents([{
+            'content': f"User Correction: {request.correction}\nContext: {request.context or 'No additional context'}\nOriginal Question: {request.original_question}",
+            'metadata': {
+                'source': 'user_feedback',
+                'filename': f"learning_feedback_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                'file_type': 'learning_feedback',
+                'category': request.category,
+                'date': datetime.now().isoformat(),
+                'chunk_index': 0,
+                'total_chunks': 1,
+                'token_count': len(request.correction.split()),
+                'feedback_type': 'correction',
+                'original_question': request.original_question,
+                'original_response': request.original_response
+            }
+        }])
+        
+        return {
+            "success": True,
+            "message": "Feedback received! The chatbot will learn from this correction.",
+            "feedback_id": learning_chunk,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Feedback submission error: {str(e)}")
+
+@app.post("/api/learning/update-knowledge")
+async def update_knowledge_base(request: KnowledgeUpdateRequest):
+    """Directly update knowledge base with new information"""
+    try:
+        # Add new knowledge to the base
+        knowledge_chunk = knowledge_base.add_documents([{
+            'content': request.content,
+            'metadata': {
+                'source': request.source,
+                'filename': f"knowledge_update_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                'file_type': 'knowledge_update',
+                'category': request.category,
+                'date': datetime.now().isoformat(),
+                'chunk_index': 0,
+                'total_chunks': 1,
+                'token_count': len(request.content.split()),
+                **request.metadata
+            }
+        }])
+        
+        return {
+            "success": True,
+            "message": "Knowledge base updated successfully!",
+            "knowledge_id": knowledge_chunk,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Knowledge update error: {str(e)}")
+
+@app.get("/api/learning/feedback-history")
+async def get_feedback_history(session_id: Optional[str] = None):
+    """Get history of learning feedback"""
+    try:
+        # Search for feedback entries in knowledge base
+        results = knowledge_base.search("learning feedback user correction", n_results=20)
+        
+        feedback_entries = []
+        for result in results:
+            if result['metadata'].get('file_type') == 'learning_feedback':
+                feedback_entries.append({
+                    'content': result['content'],
+                    'metadata': result['metadata'],
+                    'timestamp': result['metadata'].get('date', 'Unknown')
+                })
+        
+        return {
+            "success": True,
+            "feedback_entries": feedback_entries,
+            "total_feedback": len(feedback_entries)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Feedback history error: {str(e)}")
 
 # Health check endpoint
 @app.get("/health")
