@@ -1,0 +1,14 @@
+# PDF Processing Dependencies
+# Install these for PDF resume conversion
+
+# Primary PDF parser (most reliable)
+PyMuPDF==1.23.8
+
+# Alternative PDF parsers (fallbacks)
+pdfplumber==0.10.3
+PyPDF2==3.0.1
+
+# Note: Install at least one of these for PDF processing
+# Recommended: pip install PyMuPDF
+# Fallback: pip install pdfplumber
+# Last resort: pip install PyPDF2

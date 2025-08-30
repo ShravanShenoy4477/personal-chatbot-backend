@@ -102,3 +102,25 @@ enhanced_document_processor.py
 temporal_context.py
 daily_update_pipeline.py
 .vercel
+
+# Personal/Private files (NEVER commit these!)
+personal_resume_assistant.py
+pdf_resume_converter.py
+improved_resume_converter.py
+job_description_parser.py
+job_description_template.json
+quick_job_input.py
+json_to_pdf_resume.py
+ai_resume_transformer.py
+bullet_point_resume_converter.py
+resume_template_bullet_points.json
+PERSONAL_RESUME_GUIDE.md
+master_resume.json
+resume_*.json
+customized_resume_*.json
+transformed_resume_*.json
+bullet_point_resume.json
+cover_letter_*.txt
+job_applications/
+job_descriptions/
+personal_notes/
